@@ -1,0 +1,1090 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Casino — Games</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --shadow: 0 10px 30px rgba(0,0,0,.08);
+      --radius:16px;
+
+      --blue:#2563eb;
+      --blue2:#1d4ed8;
+
+      --green:#57d26a;
+      --green2:#10b981;
+      --red:#ef4444;
+      --black:#111827;
+
+      --tile:#4f83ff;
+      --tileShadow: rgba(0,0,0,.12);
+    }
+
+    *{box-sizing:border-box}
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); }
+    .app{ min-height:100dvh; display:flex; flex-direction:column; }
+
+    .topbar{ padding:14px 14px 8px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .title{ font-weight:1000; font-size:18px; }
+    .balance{ background:var(--card); border-radius:999px; padding:8px 12px; box-shadow:var(--shadow); font-weight:1000; display:flex; align-items:center; gap:8px; }
+    .chip{ width:10px;height:10px;border-radius:999px;background:#9ca3af; display:inline-block; }
+
+    .content{ flex:1; padding:10px 14px 94px; display:flex; flex-direction:column; gap:12px; }
+    .view{ display:none; }
+    .view.active{ display:block; }
+    .card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; }
+
+    .nav{ position:fixed; left:0; right:0; bottom:0; height:76px; background:rgba(255,255,255,.9); backdrop-filter: blur(10px);
+      border-top:1px solid #e5e7eb; display:flex; justify-content:space-around; align-items:center; padding:8px 10px env(safe-area-inset-bottom);
+    }
+    .nav-btn{ flex:1; border:0; background:transparent; cursor:pointer; padding:8px 6px; border-radius:14px; display:flex; flex-direction:column;
+      align-items:center; gap:4px; color:var(--muted); font-weight:1000; font-size:12px;
+    }
+    .nav-btn.active{ color:#111827; background:#f3f4f6; }
+    .icon{ font-size:18px; line-height:1; }
+
+    .games-list{ display:grid; grid-template-columns:1fr; gap:10px; }
+    .game-tile{ display:flex; justify-content:space-between; align-items:center; padding:14px; border-radius:14px; border:1px solid #e5e7eb;
+      background:linear-gradient(180deg,#fff,#f8fafc); cursor:pointer; user-select:none;
+    }
+    .game-tile .name{ font-weight:1100; }
+    .game-tile .desc{ color:var(--muted); font-size:13px; margin-top:2px; }
+    .pill{ font-weight:1000; background:#eef2ff; color:#3730a3; padding:8px 12px; border-radius:999px; border:1px solid #e0e7ff; }
+
+    .row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .back{ color:#2563eb; font-weight:1000; cursor:pointer; user-select:none; }
+
+    .divider{ height:1px; background:#e5e7eb; margin:12px 0; }
+
+    /* Common input panel */
+    .panel{ background:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:12px; display:flex; flex-direction:column; gap:12px; }
+    .bet-box{ background:#f1f5f9; border-radius:14px; border:1px solid #e5e7eb; padding:10px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .bet-box input{ width:100%; border:0; outline:none; background:transparent; font-size:18px; font-weight:1100; }
+    .mini-actions{ display:flex; gap:8px; }
+    .mini-btn{ border:0; cursor:pointer; border-radius:12px; padding:10px 12px; background:linear-gradient(180deg,var(--blue),var(--blue2)); color:#fff; font-weight:1100;
+      box-shadow:0 6px 0 rgba(0,0,0,.12); user-select:none;
+    }
+    .mini-btn:active{ transform:translateY(2px); }
+    .quick-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .quick-left{ display:flex; gap:10px; flex-wrap:wrap; }
+    .qbtn{ border:0; cursor:pointer; border-radius:12px; padding:10px 12px; background:#eef2f7; color:#111827; font-weight:1100; user-select:none; }
+    .status{ font-size:13px; color:var(--muted); }
+    .big-action{ border:0; cursor:pointer; border-radius:14px; padding:16px 14px; font-size:18px; font-weight:1100; color:#fff; background:var(--green);
+      box-shadow:0 8px 0 rgba(0,0,0,.12); user-select:none; display:flex; align-items:center; justify-content:center; gap:10px;
+    }
+    .big-action:active{ transform:translateY(2px); }
+    .big-action:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
+
+    /* MINES */
+    .grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:10px; border-radius:18px; background:#f8fafc; border:1px solid #e5e7eb; }
+    .cell{
+      aspect-ratio:1/1; border-radius:10px; background:var(--tile); box-shadow:0 6px 0 var(--tileShadow); cursor:pointer; user-select:none;
+      display:flex; align-items:center; justify-content:center; font-weight:1100; color:#fff; transition:transform .06s ease, filter .1s ease, background .15s ease;
+      position:relative; overflow:hidden;
+    }
+    .cell:active{ transform:translateY(2px); }
+    .cell.disabled{ cursor:not-allowed; filter: grayscale(.2) brightness(.95); }
+    .cell.open.safe{ background:#60a5fa; }
+    .cell.open.safe::after{ content:"💎"; font-size:20px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+    .cell.open.mine{ background:var(--red); }
+    .cell.open.mine::after{ content:"💣"; font-size:20px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+
+    .mult-row{ display:flex; gap:10px; overflow:auto; padding:2px 2px 6px; -webkit-overflow-scrolling:touch; }
+    .mult-chip{ flex:0 0 auto; display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+      padding:8px 10px; font-weight:1100; color:#374151; box-shadow:0 6px 14px rgba(0,0,0,.06);
+    }
+    .mult-chip.active{ border-color:#93c5fd; box-shadow:0 0 0 4px rgba(147,197,253,.35); }
+    .diamond{ width:10px;height:10px; transform:rotate(45deg); background:#9ca3af; border-radius:2px; display:inline-block; }
+
+    .mines-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .mopt{ border:0; cursor:pointer; border-radius:12px; padding:10px 14px; background:#eef2f7; font-weight:1100; }
+    .mopt.active{ background:var(--blue); color:#fff; }
+    .change-btn{ margin-left:auto; border:0; cursor:pointer; border-radius:12px; padding:10px 14px; background:var(--blue); color:#fff; font-weight:1100;
+      box-shadow:0 6px 0 rgba(0,0,0,.10);
+    }
+    .change-btn:active{ transform:translateY(2px); }
+
+    /* WHEEL roulette */
+    .roulette-wrap{ display:flex; flex-direction:column; gap:12px; align-items:center; }
+    .roulette-area{ position:relative; width:min(340px,92vw); aspect-ratio:1/1; }
+    .roulette-wheel{
+      width:100%; height:100%; border-radius:999px; border:10px solid #fff; box-shadow:var(--shadow);
+      background: conic-gradient(
+        #ef4444 0deg 22.5deg,  #111827 22.5deg 45deg,
+        #ef4444 45deg 67.5deg, #111827 67.5deg 90deg,
+        #ef4444 90deg 112.5deg, #111827 112.5deg 135deg,
+        #ef4444 135deg 157.5deg, #111827 157.5deg 180deg,
+        #ef4444 180deg 202.5deg, #111827 202.5deg 225deg,
+        #ef4444 225deg 247.5deg, #111827 247.5deg 270deg,
+        #ef4444 270deg 292.5deg, #111827 292.5deg 315deg,
+        #ef4444 315deg 337.5deg, #10b981 337.5deg 360deg
+      );
+      transition: transform 3.2s cubic-bezier(.12,.9,.12,1);
+      position:relative;
+    }
+    .roulette-wheel::after{
+      content:"";
+      position:absolute;
+      inset:28%;
+      background:#fff;
+      border-radius:999px;
+      box-shadow: inset 0 0 0 6px rgba(0,0,0,.08);
+    }
+    .pointer{
+      position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+      width:0;height:0; border-left:14px solid transparent; border-right:14px solid transparent; border-bottom:28px solid #111827;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,.25));
+      z-index:2;
+    }
+    .predict{
+      width:100%;
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .pbtn{
+      border:0; cursor:pointer;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:1100;
+      background:#eef2f7;
+      box-shadow:0 6px 0 rgba(0,0,0,.06);
+      user-select:none;
+      min-width:110px;
+      display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .pbtn:active{ transform:translateY(2px); }
+    .pbtn.active{ outline: 4px solid rgba(37,99,235,.25); }
+    .dot{ width:10px;height:10px;border-radius:999px; display:inline-block; }
+    .dot.red{ background:#ef4444; } .dot.black{ background:#111827; } .dot.green{ background:#10b981; }
+
+    /* Profile */
+    .profile-header{ display:flex; gap:14px; align-items:center; padding:10px 0 6px; }
+    .avatar{ width:78px;height:78px;border-radius:999px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:1100;box-shadow:var(--shadow);overflow:hidden; }
+    .avatar-wrap{ position:relative; width:78px;height:78px; }
+    .cam{ position:absolute; left:-6px; bottom:-6px; width:34px;height:34px;border-radius:999px;background:#2563eb;display:flex;align-items:center;justify-content:center;color:#fff;
+      font-size:16px;border:4px solid #fff;box-shadow:var(--shadow);cursor:pointer;user-select:none;
+    }
+    .profile-meta .name{ font-weight:1100; font-size:18px; }
+    .profile-meta .lvl{ margin-top:4px; font-weight:1000; }
+
+    .level-card{ background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; }
+    .progress{ width:100%; height:10px; border-radius:999px; background:#e5e7eb; overflow:hidden; margin-top:10px; }
+    .progress > div{ height:100%; width:0%; background:#2563eb; }
+
+    .levels-list{ margin-top:10px; }
+    .level-item{ padding:12px 0; border-bottom:1px solid #f1f5f9; }
+    .level-item:last-child{ border-bottom:0; }
+    .level-title{ font-weight:1100; }
+    .level-sub{ margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:13px; }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      border-radius:999px; padding:6px 10px;
+      font-weight:1000; border:1px solid #e5e7eb; background:#f8fafc; color:#111827;
+    }
+    .badge.ok{ border-color:#bbf7d0; background:#ecfdf5; }
+    .badge.now{ border-color:#93c5fd; background:#eff6ff; }
+    .badge.lock{ opacity:.65; }
+    .badge.win{ border-color:#fde68a; background:#fffbeb; }
+
+    /* FAQ */
+    details{ border:1px solid #e5e7eb; border-radius:14px; padding:10px 12px; background:#fff; }
+    summary{ cursor:pointer; font-weight:1100; list-style:none; }
+    summary::-webkit-details-marker{ display:none; }
+    details p{ margin:10px 0 0; line-height:1.35; }
+
+    /* Bonus: promo + wheel "old better style" */
+    .promo{ display:flex; gap:10px; align-items:stretch; flex-wrap:wrap; }
+    .promo input{ flex:1; min-width:180px; border:1px solid #e5e7eb; border-radius:12px; padding:12px; font-weight:1100; font-size:16px; outline:none; }
+    .btn{ border:0; cursor:pointer; border-radius:12px; padding:12px 14px; font-weight:1100; background:var(--blue2); color:#fff; box-shadow:0 6px 0 rgba(0,0,0,.10); user-select:none; }
+    .btn:active{ transform:translateY(2px); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
+
+    .wheel-wrap{ display:flex; flex-direction:column; gap:10px; align-items:center; padding:8px 0 0; }
+    .wheel-area{ position:relative; width:min(340px, 92vw); aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; }
+    .wheel{
+      width:100%;
+      height:100%;
+      border-radius:999px;
+      border:10px solid #fff;
+      box-shadow: var(--shadow);
+      background: conic-gradient(
+        #1f2937 0deg 22.5deg, #111827 22.5deg 45deg,
+        #1f2937 45deg 67.5deg, #111827 67.5deg 90deg,
+        #1f2937 90deg 112.5deg, #111827 112.5deg 135deg,
+        #1f2937 135deg 157.5deg, #111827 157.5deg 180deg,
+        #1f2937 180deg 202.5deg, #111827 202.5deg 225deg,
+        #1f2937 225deg 247.5deg, #111827 247.5deg 270deg,
+        #1f2937 270deg 292.5deg, #111827 292.5deg 315deg,
+        #1f2937 315deg 337.5deg, #111827 337.5deg 360deg
+      );
+      transition: transform 3.2s cubic-bezier(.12,.9,.12,1);
+      position:relative;
+      overflow:hidden;
+    }
+    .wheel::after{
+      content:"";
+      position:absolute;
+      inset:28%;
+      background:#fff;
+      border-radius:999px;
+      box-shadow: inset 0 0 0 6px rgba(37,99,235,.25);
+    }
+    .labels{ position:absolute; inset:0; pointer-events:none; display:block; z-index:1; }
+    .label{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform-origin: 0 0;
+      font-weight:1100;
+      color:#e5e7eb;
+      font-size:14px;
+      text-shadow: 0 2px 4px rgba(0,0,0,.4);
+      white-space:nowrap;
+    }
+    .bonus-bar{
+      width:100%;
+      margin-top:8px;
+      background:#111827;
+      border-radius:16px;
+      padding:12px;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .cooldown{ font-weight:1000; color:#e5e7eb; }
+    .spinbtn{
+      border:0; cursor:pointer; border-radius:12px; padding:12px 14px;
+      font-weight:1100; background:#2563eb; color:#fff;
+      box-shadow: 0 6px 0 rgba(0,0,0,.22);
+      user-select:none;
+      min-width:110px;
+    }
+    .spinbtn:active{ transform: translateY(2px); }
+    .spinbtn:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title">Mini App</div>
+      <div class="balance"><span class="chip"></span><span id="balance">0</span></div>
+    </div>
+
+    <div class="content">
+      <!-- ІГРИ -->
+      <section id="view-games" class="view active">
+        <div class="card">
+          <div class="title" style="margin-bottom:10px;">Ігри</div>
+          <div class="games-list">
+            <div class="game-tile" id="open-mines">
+              <div><div class="name">Mines</div><div class="desc">5×5, множники</div></div>
+              <div class="pill">Грати</div>
+            </div>
+            <div class="game-tile" id="open-roulette">
+              <div><div class="name">Wheel</div><div class="desc">Прогноз кольору + множник</div></div>
+              <div class="pill">Грати</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MINES -->
+      <section id="view-mines" class="view">
+        <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="row"><div class="title">Mines</div><div class="back" data-back="games">← Назад</div></div>
+
+          <div class="grid" id="minesGrid"></div>
+          <div class="mult-row" id="minesMultRow"></div>
+
+          <div class="panel">
+            <div class="bet-box">
+              <input id="minesBet" type="number" min="1" step="1" value="5000" />
+              <div class="mini-actions">
+                <button class="mini-btn" id="minesHalf">÷</button>
+                <button class="mini-btn" id="minesDouble">×</button>
+              </div>
+            </div>
+
+            <div class="quick-row">
+              <div class="quick-left">
+                <button class="qbtn" id="minesAdd5">+5</button>
+                <button class="qbtn" id="minesAdd25">+25</button>
+              </div>
+            </div>
+
+            <div>
+              <div style="font-weight:1100; margin-bottom:8px;">Кількість мін:</div>
+              <div class="mines-row">
+                <button class="mopt active" data-mines="2">2</button>
+                <button class="mopt" data-mines="3">3</button>
+                <button class="mopt" data-mines="5">5</button>
+                <button class="mopt" data-mines="10">10</button>
+                <button class="change-btn" id="minesApply">Змінити</button>
+              </div>
+            </div>
+
+            <button class="big-action" id="minesAction">Грати</button>
+            <div class="status" id="minesStatus">Натисни “Грати”, потім відкривай клітинки.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROULETTE -->
+      <section id="view-roulette" class="view">
+        <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="row"><div class="title">Wheel</div><div class="back" data-back="games">← Назад</div></div>
+
+          <div class="roulette-wrap">
+            <div class="roulette-area">
+              <div class="pointer"></div>
+              <div class="roulette-wheel" id="rouletteWheel"></div>
+            </div>
+
+            <!-- прогноз кольору -->
+            <div class="predict">
+              <button class="pbtn active" data-pick="red" id="pickRed"><span class="dot red"></span>Червоний</button>
+              <button class="pbtn" data-pick="green" id="pickGreen"><span class="dot green"></span>Зелений</button>
+              <button class="pbtn" data-pick="black" id="pickBlack"><span class="dot black"></span>Чорний</button>
+            </div>
+
+            <div class="panel" style="width:100%;">
+              <div style="font-weight:1100;">Сума ставки</div>
+
+              <div class="bet-box">
+                <input id="rouletteBet" type="number" min="1" step="1" value="2000" />
+                <div class="mini-actions">
+                  <button class="mini-btn" id="rouletteHalf">÷</button>
+                  <button class="mini-btn" id="rouletteDouble">×</button>
+                </div>
+              </div>
+
+              <div class="quick-row">
+                <div class="quick-left">
+                  <button class="qbtn" data-radd="1">+1</button>
+                  <button class="qbtn" data-radd="5">+5</button>
+                  <button class="qbtn" data-radd="10">+10</button>
+                  <button class="qbtn" data-radd="25">+25</button>
+                </div>
+              </div>
+
+              <div class="status" id="rouletteStatus">Обери колір і натисни “Грати”.</div>
+              <button class="big-action" id="roulettePlay">Грати</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="view-profile" class="view">
+        <div class="card">
+          <div class="title">Профіль</div>
+
+          <div class="profile-header">
+            <div class="avatar-wrap">
+              <div class="avatar" id="avatar"><span id="avatarLetter">U</span></div>
+              <div class="cam" id="pickAvatar">📷</div>
+              <input id="avatarInput" type="file" accept="image/*" style="display:none" />
+            </div>
+            <div class="profile-meta">
+              <div class="name" id="usernameText">Demo User (123456)</div>
+              <div class="lvl" id="levelText">1 рівень</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="level-card">
+            <div style="font-weight:1100; font-size:16px;">Ваш рівень: <span id="profileLevel">1</span></div>
+            <div style="margin-top:6px; font-weight:1100;">
+              Додатковий бонус: <span id="levelBonusText" style="color:#2563eb;">0</span> 🪙
+            </div>
+            <div style="margin-top:6px; font-weight:1100;">
+              Досвід до <span id="nextLevel">2</span> рівня: <span id="xpText">0/0 (0%)</span>
+            </div>
+            <div class="progress"><div id="xpBar"></div></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="level-card">
+            <div style="font-weight:1100; font-size:16px;">Рівні</div>
+            <div class="levels-list" id="levelsList"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div style="font-weight:1100; font-size:16px; margin-bottom:10px;">FAQ</div>
+          <details open>
+            <summary>Що таке рівень?</summary>
+            <p>Рівень — це нагорода за тривалу участь у активностях на сайті.</p>
+          </details>
+          <details>
+            <summary>Що дає рівень?</summary>
+            <p>Додатковий бонус для колеса у вкладці “Бонуси”. При отриманні 8 рівня: <b>+10% до виграшу бонус-колеса</b>.</p>
+          </details>
+          <details>
+            <summary>Як отримати досвід?</summary>
+            <p>
+              1) Отримуючи безкоштовний бонус у вкладці “Бонуси”.<br/>
+              — Кожне отримання бонусу додає <b>35</b> одиниць досвіду.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <!-- BONUS -->
+      <section id="view-bonus" class="view">
+        <div class="card">
+          <div class="title">Бонуси</div>
+
+          <div class="divider"></div>
+
+          <div style="font-weight:1100; margin-bottom:8px;">Промокод</div>
+          <div class="promo">
+            <input id="promoInput" placeholder="FREE" />
+            <button class="btn" id="promoBtn">Активувати</button>
+          </div>
+          <div class="status" id="promoStatus" style="margin-top:8px;"></div>
+
+          <div class="divider"></div>
+
+          <div style="font-weight:1100; margin-bottom:8px;">Колесо бонусів (16 секторів)</div>
+
+          <div class="wheel-wrap">
+            <div class="wheel-area">
+              <div class="pointer"></div>
+              <div class="wheel" id="bonusWheel"></div>
+              <div class="labels" id="bonusLabels"></div>
+            </div>
+
+            <div class="bonus-bar">
+              <div>
+                <div class="cooldown" id="cooldownText">12 год перезарядка</div>
+                <div style="font-size:12px; color:#cbd5e1; margin-top:2px;" id="spinHint">Крути — монети + досвід</div>
+              </div>
+              <button class="spinbtn" id="spinBtn">Крутити</button>
+            </div>
+
+            <div class="status" id="spinStatus"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MORE -->
+      <section id="view-more" class="view">
+        <div class="card">
+          <div class="title">Ще</div>
+          <p class="status" style="margin:8px 0 0;">Налаштування / правила / підтримка.</p>
+        </div>
+      </section>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-target="games"><div class="icon">🎮</div>Ігри</button>
+      <button class="nav-btn" data-target="profile"><div class="icon">👤</div>Профіль</button>
+      <button class="nav-btn" data-target="bonus"><div class="icon">🎁</div>Бонуси</button>
+      <button class="nav-btn" data-target="more"><div class="icon">⋯</div>Ще</button>
+    </nav>
+  </div>
+
+  <script>
+    // --- Storage
+    const LS_KEY = "miniapp_state_ui_v3";
+    const loadState = ()=>{ try{ const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null; }catch{return null;} };
+    const saveState = ()=> localStorage.setItem(LS_KEY, JSON.stringify(state));
+
+    // --- Levels / XP
+    const LEVELS = [
+      { level: 1, need: 200,  bonus: 4   },
+      { level: 2, need: 400,  bonus: 12  },
+      { level: 3, need: 700,  bonus: 28  },
+      { level: 4, need: 1100, bonus: 60  },
+      { level: 5, need: 1500, bonus: 95  },
+      { level: 6, need: 2200, bonus: 140 },
+      { level: 7, need: 3000, bonus: 185 },
+      { level: 8, need: 4000, bonus: 230 },
+    ];
+    const XP_PER_BONUS = 35;
+
+    const getLevelFromXP = (xp)=>{
+      let lvl = 1;
+      for(const L of LEVELS){ if(xp >= L.need) lvl = L.level; }
+      return lvl;
+    };
+    const levelBonusFor = (lvl)=> (LEVELS.find(x=>x.level===lvl)?.bonus ?? 0);
+    const nextNeed = (lvl)=> (LEVELS.find(x=>x.level===lvl+1)?.need ?? null);
+
+    // --- App state
+    let state = loadState() || {
+      balance: 10000,
+      xp: 0,
+      level: 1,
+      username: "Demo User (123456)",
+      avatarDataUrl: null,
+      promoUsed: { FREE:false, MONKEY:false, GIFT2026:false, START:false, MINE:false },
+      lastBonusSpinAt: 0
+    };
+    state.level = getLevelFromXP(state.xp);
+    saveState();
+
+    // --- Common UI
+    const elBalance = document.getElementById("balance");
+    function setBalance(v){
+      state.balance = Math.max(0, Math.floor(v));
+      elBalance.textContent = String(state.balance);
+      saveState();
+    }
+    function addXP(x){
+      state.xp = Math.max(0, state.xp + x);
+      state.level = getLevelFromXP(state.xp);
+      saveState();
+      renderProfile();
+      renderBonus();
+    }
+    function fmt(n){ return String(Math.floor(n)); }
+
+    // --- Navigation
+    const views = {
+      games: document.getElementById("view-games"),
+      mines: document.getElementById("view-mines"),
+      roulette: document.getElementById("view-roulette"),
+      profile: document.getElementById("view-profile"),
+      bonus: document.getElementById("view-bonus"),
+      more: document.getElementById("view-more"),
+    };
+    function showView(name){
+      Object.values(views).forEach(v=>v.classList.remove("active"));
+      views[name].classList.add("active");
+    }
+    function setActiveNav(target){
+      document.querySelectorAll(".nav-btn").forEach(b=>{
+        b.classList.toggle("active", b.dataset.target === target);
+      });
+    }
+    document.querySelectorAll(".nav-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const t = btn.dataset.target;
+        if(t==="games") showView("games"); else showView(t);
+        setActiveNav(t);
+        if(t==="profile") renderProfile();
+        if(t==="bonus") renderBonus();
+      });
+    });
+    document.querySelectorAll("[data-back]").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        showView(b.dataset.back);
+        setActiveNav("games");
+      });
+    });
+    document.getElementById("open-mines").addEventListener("click", ()=>{ showView("mines"); setActiveNav("games"); });
+    document.getElementById("open-roulette").addEventListener("click", ()=>{ showView("roulette"); setActiveNav("games"); });
+
+    // ===================== MINES =====================
+    const GRID = 5;
+    const SAFE = GRID*GRID;
+    const minesGrid = document.getElementById("minesGrid");
+    const minesMultRow = document.getElementById("minesMultRow");
+    const minesBet = document.getElementById("minesBet");
+    const minesStatus = document.getElementById("minesStatus");
+    const minesAction = document.getElementById("minesAction");
+
+    let minesCount = 2, minesPending = 2, minesInGame = false, minesOpened = 0, minesBetValue=0;
+    let minesSet = new Set(), minesOpenedSet = new Set();
+    const MULT_CHIPS = 5;
+
+    function mCellId(r,c){ return `${r},${c}`; }
+    function buildMines(){
+      minesGrid.innerHTML="";
+      for(let r=0;r<GRID;r++){
+        for(let c=0;c<GRID;c++){
+          const d=document.createElement("div");
+          d.className="cell disabled";
+          d.dataset.id=mCellId(r,c);
+          d.addEventListener("click", onMinesClick);
+          minesGrid.appendChild(d);
+        }
+      }
+    }
+    function minesEnable(on){
+      document.querySelectorAll("#minesGrid .cell").forEach(x=>x.classList.toggle("disabled", !on));
+    }
+    function minesResetVisual(){
+      document.querySelectorAll("#minesGrid .cell").forEach(x=>x.className="cell disabled");
+    }
+    function minesGen(){
+      minesSet = new Set();
+      while(minesSet.size < minesCount){
+        const r=Math.floor(Math.random()*GRID), c=Math.floor(Math.random()*GRID);
+        minesSet.add(mCellId(r,c));
+      }
+    }
+    function minesMultFor(safeOpens, mines){
+      if(safeOpens<=0) return 1.00;
+      const total = SAFE;
+      const safeTotal = total - mines;
+      let p=1.0;
+      for(let i=0;i<safeOpens;i++) p *= (safeTotal-i)/(total-i);
+      const edge = 0.04;
+      const mult = (1/p)*(1-edge);
+      return Math.max(1.00, Math.round(mult*100)/100);
+    }
+    function minesCurrentMult(){ return minesMultFor(minesOpened, minesCount); }
+    function minesPayout(){ return minesBetValue * minesCurrentMult(); }
+    function minesRenderMult(){
+      minesMultRow.innerHTML="";
+      for(let i=1;i<=MULT_CHIPS;i++){
+        const step = minesOpened+i;
+        const mult = minesMultFor(step, minesCount);
+        const chip=document.createElement("div");
+        chip.className="mult-chip"+(i===1?" active":"");
+        chip.innerHTML=`<span class="diamond"></span><span>x${mult.toFixed(2)}</span>`;
+        minesMultRow.appendChild(chip);
+      }
+    }
+    function minesSyncBtn(){
+      minesAction.textContent = (!minesInGame) ? "Грати" : `Забрати ${fmt(minesPayout())} 🪙`;
+    }
+    function minesStart(){
+      const v=Number(minesBet.value);
+      if(!Number.isFinite(v)||v<=0){ minesStatus.textContent="Введи ставку."; return; }
+      if(v>state.balance){ minesStatus.textContent="Недостатньо монет."; return; }
+
+      minesBetValue=Math.floor(v);
+      setBalance(state.balance - minesBetValue);
+
+      minesOpened=0;
+      minesOpenedSet=new Set();
+      minesResetVisual();
+      minesGen();
+      minesEnable(true);
+      minesInGame=true;
+      minesBet.disabled=true;
+
+      minesRenderMult();
+      minesSyncBtn();
+      minesStatus.textContent="Гра почалась. Відкривай клітинки або забирай.";
+    }
+    function minesCashout(){
+      if(!minesInGame) return;
+      const pay=Math.floor(minesPayout());
+      setBalance(state.balance + pay);
+      minesInGame=false;
+      minesEnable(false);
+      minesBet.disabled=false;
+      minesRenderMult();
+      minesSyncBtn();
+      minesStatus.textContent=`Забрав: ${fmt(pay)} 🪙`;
+    }
+    function minesReveal(){
+      document.querySelectorAll("#minesGrid .cell").forEach(cell=>{
+        const id=cell.dataset.id;
+        if(minesSet.has(id) && !cell.classList.contains("open")){
+          cell.classList.add("open","mine");
+        }
+      });
+    }
+    function minesLose(){
+      minesReveal();
+      minesInGame=false;
+      minesEnable(false);
+      minesBet.disabled=false;
+      minesRenderMult();
+      minesSyncBtn();
+      minesStatus.textContent="Бум! Міна 😄";
+    }
+    function onMinesClick(e){
+      if(!minesInGame) return;
+      const cell=e.currentTarget;
+      const id=cell.dataset.id;
+      if(minesOpenedSet.has(id)) return;
+      minesOpenedSet.add(id);
+      cell.classList.add("open");
+      if(minesSet.has(id)){
+        cell.classList.add("mine");
+        minesLose();
+      }else{
+        cell.classList.add("safe");
+        minesOpened++;
+        minesRenderMult();
+        minesSyncBtn();
+        minesStatus.textContent=`Безпечно! Відкрито: ${minesOpened}. x${minesCurrentMult().toFixed(2)}`;
+      }
+    }
+    document.querySelectorAll("#view-mines .mopt").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if(minesInGame) return;
+        minesPending = Number(btn.dataset.mines);
+        document.querySelectorAll("#view-mines .mopt").forEach(b=>b.classList.toggle("active", b===btn));
+      });
+    });
+    document.getElementById("minesApply").addEventListener("click", ()=>{
+      if(minesInGame){ minesStatus.textContent="Не можна міняти під час гри."; return; }
+      minesCount = minesPending;
+      minesOpened = 0;
+      minesRenderMult();
+      minesStatus.textContent=`Кількість мін: ${minesCount}.`;
+    });
+    function setInputVal(el,v){ el.value=String(Math.max(1, Math.floor(v))); }
+    document.getElementById("minesHalf").addEventListener("click", ()=>{ if(!minesBet.disabled) setInputVal(minesBet, Number(minesBet.value)/2); });
+    document.getElementById("minesDouble").addEventListener("click", ()=>{ if(!minesBet.disabled) setInputVal(minesBet, Number(minesBet.value)*2); });
+    document.getElementById("minesAdd5").addEventListener("click", ()=>{ if(!minesBet.disabled) setInputVal(minesBet, Number(minesBet.value)+5); });
+    document.getElementById("minesAdd25").addEventListener("click", ()=>{ if(!minesBet.disabled) setInputVal(minesBet, Number(minesBet.value)+25); });
+    minesAction.addEventListener("click", ()=>{ if(!minesInGame) minesStart(); else minesCashout(); });
+
+    // ===================== WHEEL with prediction buttons =====================
+    const rouletteWheel = document.getElementById("rouletteWheel");
+    const rouletteBet = document.getElementById("rouletteBet");
+    const rouletteStatus = document.getElementById("rouletteStatus");
+    const roulettePlay = document.getElementById("roulettePlay");
+
+    let rouletteRot = 0;
+    let rouletteBusy = false;
+    let pick = "red";
+
+    const pickButtons = [
+      document.getElementById("pickRed"),
+      document.getElementById("pickGreen"),
+      document.getElementById("pickBlack"),
+    ];
+    pickButtons.forEach(b=>{
+      b.addEventListener("click", ()=>{
+        pick = b.dataset.pick;
+        pickButtons.forEach(x=>x.classList.toggle("active", x===b));
+        rouletteStatus.textContent = `Прогноз: ${pick==="red"?"Червоний":pick==="green"?"Зелений":"Чорний"}. Натисни “Грати”.`;
+      });
+    });
+
+    // 16 секторів: 1 зелений x14, інші x2 (черв./чорн.)
+    const rSegments = Array.from({length:16}, (_,i)=>({
+      mult: (i===15 ? 14 : 2),
+      color: (i===15 ? "green" : (i%2===0 ? "red" : "black"))
+    }));
+
+    function roulettePickIndex(){
+      // зелений рідкісний
+      const weights = rSegments.map(s => s.mult===14 ? 2 : 18);
+      const total = weights.reduce((a,b)=>a+b,0);
+      let r = Math.random()*total;
+      for(let i=0;i<weights.length;i++){
+        r -= weights[i];
+        if(r<=0) return i;
+      }
+      return weights.length-1;
+    }
+
+    function rouletteSpin(){
+      if(rouletteBusy) return;
+      const v=Number(rouletteBet.value);
+      if(!Number.isFinite(v)||v<=0){ rouletteStatus.textContent="Введи ставку."; return; }
+      if(v>state.balance){ rouletteStatus.textContent="Недостатньо монет."; return; }
+
+      rouletteBusy = true;
+      roulettePlay.disabled = true;
+
+      const bet = Math.floor(v);
+      setBalance(state.balance - bet);
+
+      const idx = roulettePickIndex();
+      const segAngle = 360 / rSegments.length;
+      const targetCenter = (idx * segAngle) + segAngle/2;
+      const extra = 360 * (4 + Math.floor(Math.random()*3));
+      const targetRotation = extra + (360 - targetCenter);
+
+      rouletteRot = (rouletteRot + targetRotation) % 360000;
+      rouletteWheel.style.transform = `rotate(${rouletteRot}deg)`;
+
+      setTimeout(()=>{
+        const landed = rSegments[idx]; // {mult,color}
+        const ok = (landed.color === pick);
+        if(ok){
+          const win = bet * landed.mult;
+          setBalance(state.balance + win);
+          rouletteStatus.textContent = `Випало: ${landed.color.toUpperCase()} x${landed.mult}. ✅ Виграш: ${fmt(win)} 🪙`;
+        } else {
+          rouletteStatus.textContent = `Випало: ${landed.color.toUpperCase()} x${landed.mult}. ❌ Не вгадав — ставка згоріла.`;
+        }
+        rouletteBusy = false;
+        roulettePlay.disabled = false;
+      }, 3300);
+    }
+
+    document.getElementById("rouletteHalf").addEventListener("click", ()=> setInputVal(rouletteBet, Number(rouletteBet.value)/2));
+    document.getElementById("rouletteDouble").addEventListener("click", ()=> setInputVal(rouletteBet, Number(rouletteBet.value)*2));
+    document.querySelectorAll("[data-radd]").forEach(b=>{
+      b.addEventListener("click", ()=> setInputVal(rouletteBet, Number(rouletteBet.value) + Number(b.dataset.radd)));
+    });
+    roulettePlay.addEventListener("click", rouletteSpin);
+
+    // ===================== PROFILE (restore better level list with winnings badges) =====================
+    const usernameText = document.getElementById("usernameText");
+    const levelText = document.getElementById("levelText");
+    const profileLevel = document.getElementById("profileLevel");
+    const levelBonusText = document.getElementById("levelBonusText");
+    const nextLevelEl = document.getElementById("nextLevel");
+    const xpText = document.getElementById("xpText");
+    const xpBar = document.getElementById("xpBar");
+    const levelsList = document.getElementById("levelsList");
+
+    const avatar = document.getElementById("avatar");
+    const pickAvatar = document.getElementById("pickAvatar");
+    const avatarInput = document.getElementById("avatarInput");
+
+    function renderProfile(){
+      usernameText.textContent = state.username;
+      levelText.textContent = `${state.level} рівень`;
+      profileLevel.textContent = String(state.level);
+      levelBonusText.textContent = String(levelBonusFor(state.level));
+
+      const next = nextNeed(state.level);
+      if(!next){
+        nextLevelEl.textContent = String(state.level);
+        xpText.textContent = `${state.xp}/${LEVELS[LEVELS.length-1].need} (MAX)`;
+        xpBar.style.width = "100%";
+      } else {
+        nextLevelEl.textContent = String(state.level+1);
+        const curNeed = LEVELS.find(x=>x.level===state.level)?.need ?? 0;
+        const span = next - curNeed;
+        const done = Math.max(0, state.xp - curNeed);
+        const pct = Math.min(100, Math.round((done/span)*100));
+        xpText.textContent = `${state.xp}/${next} (${pct}%)`;
+        xpBar.style.width = pct + "%";
+      }
+
+      // avatar
+      if(state.avatarDataUrl){
+        avatar.innerHTML = `<img alt="avatar" src="${state.avatarDataUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        const letter = (state.username?.trim()?.[0] || "U").toUpperCase();
+        avatar.innerHTML = `<span style="font-weight:1100;font-size:22px;">${letter}</span>`;
+      }
+
+      // levels list
+      let html = "";
+      for(const L of LEVELS){
+        const got = state.xp >= L.need;
+        const now = state.level === L.level;
+
+        const statusBadge = now
+          ? `<span class="badge now">✓ Це ваш рівень</span>`
+          : (got ? `<span class="badge ok">✓ Ви отримали цей рівень</span>` : `<span class="badge lock">🔒 Закрито</span>`);
+
+        html += `
+          <div class="level-item">
+            <div class="level-title">Рівень ${L.level}</div>
+            <div class="level-sub">
+              ${statusBadge}
+              <span class="badge win">Виграш: +${L.bonus} 🪙</span>
+              <span class="badge">Досвід: ${Math.min(state.xp, L.need)}/${L.need}</span>
+            </div>
+          </div>
+        `;
+      }
+      levelsList.innerHTML = html;
+    }
+
+    pickAvatar.addEventListener("click", ()=> avatarInput.click());
+    avatarInput.addEventListener("change", (e)=>{
+      const file=e.target.files && e.target.files[0];
+      if(!file) return;
+      const r=new FileReader();
+      r.onload=()=>{
+        state.avatarDataUrl=String(r.result);
+        saveState();
+        renderProfile();
+      };
+      r.readAsDataURL(file);
+    });
+
+    // ===================== BONUS (restore better wheel with labels) =====================
+    const promoInput = document.getElementById("promoInput");
+    const promoBtn = document.getElementById("promoBtn");
+    const promoStatus = document.getElementById("promoStatus");
+
+    const PROMOS = {
+      FREE: 1000,
+      MONKEY: 900,
+      GIFT2026: 1200,
+      START: 1500,
+      MINE: 30000
+    };
+
+    promoBtn.addEventListener("click", ()=>{
+      const code=(promoInput.value||"").trim().toUpperCase();
+      if(!code){ promoStatus.textContent="Введи промокод."; return; }
+      if(!(code in PROMOS)){ promoStatus.textContent="❌ Невірний промокод."; return; }
+      if(state.promoUsed[code]){ promoStatus.textContent="Цей промокод вже використано."; return; }
+
+      state.promoUsed[code]=true;
+      saveState();
+      setBalance(state.balance + PROMOS[code]);
+      promoStatus.textContent = `✅ ${code}: +${PROMOS[code]} 🪙`;
+      promoInput.value="";
+    });
+
+    const bonusWheel = document.getElementById("bonusWheel");
+    const bonusLabels = document.getElementById("bonusLabels");
+    const spinBtn = document.getElementById("spinBtn");
+    const cooldownText = document.getElementById("cooldownText");
+    const spinHint = document.getElementById("spinHint");
+    const spinStatus = document.getElementById("spinStatus");
+
+    const segments = [
+      { value: 2,  weight: 16 },
+      { value: 4,  weight: 14 },
+      { value: 7,  weight: 10 },
+      { value: 9,  weight: 9  },
+      { value: 12, weight: 6  },
+      { value: 20, weight: 3  },
+      { value: 2,  weight: 16 },
+      { value: 4,  weight: 14 },
+      { value: 7,  weight: 10 },
+      { value: 9,  weight: 9  },
+      { value: 12, weight: 6  },
+      { value: 20, weight: 3  },
+      { value: 2,  weight: 16 },
+      { value: 4,  weight: 14 },
+      { value: 7,  weight: 10 },
+      { value: 12, weight: 6  },
+    ];
+
+    const COOLDOWN_MS = 12*60*60*1000;
+    let spinning=false;
+    let wheelRotation=0;
+
+    function pickWeightedIndex(){
+      const total = segments.reduce((s,x)=>s+x.weight,0);
+      let r = Math.random() * total;
+      for(let i=0;i<segments.length;i++){
+        r -= segments[i].weight;
+        if(r <= 0) return i;
+      }
+      return segments.length - 1;
+    }
+
+    function boostLevel8(val){
+      // при 8 рівні +10% до бонус-колеса
+      return (state.level >= 8) ? Math.floor(val * 1.10) : val;
+    }
+
+    function canSpin(){
+      const now=Date.now();
+      return !spinning && (state.lastBonusSpinAt===0 || (now - state.lastBonusSpinAt) >= COOLDOWN_MS);
+    }
+
+    function fmtTime(ms){
+      const s = Math.max(0, Math.floor(ms/1000));
+      const h = Math.floor(s/3600);
+      const m = Math.floor((s%3600)/60);
+      const ss = s%60;
+      const pad = (x)=>String(x).padStart(2,"0");
+      return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+    }
+
+    function updateCooldown(){
+      const now=Date.now();
+      if(state.lastBonusSpinAt===0){
+        cooldownText.textContent="12 год перезарядка";
+        spinBtn.disabled=!canSpin();
+        return;
+      }
+      const left = COOLDOWN_MS - (now - state.lastBonusSpinAt);
+      if(left<=0){
+        cooldownText.textContent="Готово! Можна крутити";
+        spinBtn.disabled=!canSpin();
+      } else {
+        cooldownText.textContent=`Перезарядка: ${fmtTime(left)}`;
+        spinBtn.disabled=true;
+      }
+    }
+
+    function renderWheelLabels(){
+      bonusLabels.innerHTML="";
+      const angle = 360 / segments.length;
+      for(let i=0;i<segments.length;i++){
+        const a = (i * angle) - 90 + angle/2;
+        const el = document.createElement("div");
+        el.className="label";
+        el.style.transform = `rotate(${a}deg) translate(120px) rotate(90deg)`;
+        el.textContent = `+${segments[i].value}`;
+        bonusLabels.appendChild(el);
+      }
+    }
+
+    function spin(){
+      if(!canSpin()) return;
+
+      spinning = true;
+      spinBtn.disabled = true;
+      spinStatus.textContent = "Крутиться...";
+
+      const idx = pickWeightedIndex();
+      const angle = 360 / segments.length;
+      const targetCenter = (idx * angle) + angle/2;
+      const extra = 360 * (4 + Math.floor(Math.random()*3));
+      const targetRotation = extra + (360 - targetCenter);
+
+      wheelRotation = (wheelRotation + targetRotation) % 360000;
+      bonusWheel.style.transform = `rotate(${wheelRotation}deg)`;
+
+      setTimeout(()=>{
+        let reward = segments[idx].value;
+        reward = boostLevel8(reward);
+
+        setBalance(state.balance + reward);
+        addXP(XP_PER_BONUS);
+
+        state.lastBonusSpinAt = Date.now();
+        saveState();
+
+        spinStatus.textContent = `Випало: +${reward} 🪙 (досвід +${XP_PER_BONUS})`;
+        spinning=false;
+        updateCooldown();
+      }, 3300);
+    }
+
+    spinBtn.addEventListener("click", spin);
+
+    function renderBonus(){
+      spinHint.textContent = (state.level>=8) ? "8 рівень: +10% до бонус-колеса ✅" : "Крути — монети + досвід";
+      updateCooldown();
+    }
+
+    // --- Telegram user (optional)
+    function initTelegramUser(){
+      const tg = window.Telegram?.WebApp;
+      const u = tg?.initDataUnsafe?.user;
+      if(u?.id){
+        const uname = u.username ? `@${u.username}` : [u.first_name, u.last_name].filter(Boolean).join(" ");
+        state.username = `${uname || "User"} (${u.id})`;
+        saveState();
+      }
+    }
+
+    // --- init
+    function init(){
+      initTelegramUser();
+      setBalance(state.balance);
+
+      buildMines();
+      minesRenderMult();
+      minesSyncBtn();
+
+      renderWheelLabels();
+      renderProfile();
+      renderBonus();
+
+      setInterval(updateCooldown, 1000);
+    }
+    init();
+  </script>
+</body>
+</html>
